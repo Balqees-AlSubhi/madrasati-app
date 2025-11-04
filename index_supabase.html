@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام مدرستي شموخ ورقي — نسخة سحابيّة (Supabase)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .star { cursor: pointer; transition: all 0.2s ease; }
+        .star:hover { transform: scale(1.1); }
+        .star.filled { color: #fbbf24; }
+        .star.empty { color: #d1d5db; }
+        .fade-in { animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px);} to { opacity: 1; transform: translateY(0);} }
+        .page { display: none; } .page.active { display: block; }
+        .dark-mode { background: linear-gradient(135deg, #1f2937 0%, #111827 100%); color: #f9fafb; }
+        .dark-mode .bg-white { background-color: #374151 !important; color: #f9fafb !important; }
+        .dark-mode .text-gray-800 { color: #f9fafb !important; }
+        .dark-mode .text-gray-600 { color: #d1d5db !important; }
+        .dark-mode .border-gray-300 { border-color: #4b5563 !important; }
+        .notification { animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .badge { display:inline-flex; align-items:center; gap:.35rem; padding:.2rem .5rem; border-radius:.5rem; font-size:.75rem;}
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-full" id="mainBody">
+    <!-- Top banner for status -->
+    <div id="cloudStatus" class="hidden bg-yellow-100 text-yellow-900 px-4 py-2 text-sm">
+        ⏳ المزامنة مع الخادم جارية...
+    </div>
+
+    <!-- Navigation Bar -->
+    <nav class="bg-white shadow-lg mb-8" id="navbar">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center py-4">
+                <div class="flex items-center space-x-4">
+                    <h1 class="text-2xl font-bold text-gray-800">📚 نظام مدرستي شموخ ورقي — سحابي</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button onclick="toggleTheme()" class="p-2 rounded-lg hover:bg-gray-100 transition duration-200" id="themeToggle">
+                        <span id="themeIcon">🌙</span>
+                    </button>
+                    <button onclick="showPage('home')" id="homeBtn" class="px-4 py-2 rounded-lg font-semibold transition duration-200 bg-blue-600 text-white">الصفحة الرئيسية</button>
+                    <button onclick="showPage('evaluation')" id="evaluationBtn" class="px-4 py-2 rounded-lg font-semibold transition duration-200 text-gray-600 hover:bg-gray-100">تقييم الصفوف</button>
+                    <button onclick="showPage('reports')" id="reportsBtn" class="px-4 py-2 rounded-lg font-semibold transition duration-200 text-gray-600 hover:bg-gray-100">التقارير</button>
+                    <button onclick="showPage('settings')" id="settingsBtn" class="px-4 py-2 rounded-lg font-semibold transition duration-200 text-gray-600 hover:bg-gray-100">الإعدادات</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Home Page -->
+    <div id="homePage" class="page active">
+        <div class="container mx-auto px-4 py-8 max-w-6xl">
+            <div class="text-center mb-12">
+                <h1 class="text-5xl font-bold text-gray-800 mb-4">مرحباً بك في النسخة السحابية</h1>
+                <p class="text-xl text-gray-600 mb-8">البيانات مشتركة بين جميع المستخدمين عبر Supabase</p>
+                <div class="flex items-center justify-center gap-2 mb-4">
+                    <span class="badge bg-green-100 text-green-700">حفظ سحابي</span>
+                    <span class="badge bg-blue-100 text-blue-700">تحديثات فورية</span>
+                </div>
+                <button onclick="showPage('evaluation')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition duration-200">
+                    ابدأ التقييم الآن
+                </button>
+            </div>
+
+            <!-- Quick Statistics -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
+                <div class="bg-white rounded-xl shadow-lg p-6 text-center">
+                    <div class="text-4xl font-bold text-blue-600" id="homeStatsClasses">32</div>
+                    <div class="text-gray-600 mt-2">إجمالي الصفوف</div>
+                </div>
+                <div class="bg-white rounded-xl shadow-lg p-6 text-center">
+                    <div class="text-4xl font-bold text-green-600" id="homeStatsAverage">0.0</div>
+                    <div class="text-gray-600 mt-2">متوسط التقييم</div>
+                </div>
+                <div class="bg-white rounded-xl shadow-lg p-6 text-center">
+                    <div class="text-4xl font-bold text-purple-600" id="homeStatsEvaluations">0</div>
+                    <div class="text-gray-600 mt-2">عدد التقييمات</div>
+                </div>
+                <div class="bg-white rounded-xl shadow-lg p-6 text-center">
+                    <div class="text-4xl font-bold text-orange-600" id="homeStatsStars">0</div>
+                    <div class="text-gray-600 mt-2">إجمالي النجوم</div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                <button onclick="showPage('evaluation')" class="bg-white rounded-xl shadow-lg p-6 text-center hover:shadow-xl transition duration-300">
+                    <div class="text-4xl mb-4">📝</div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-2">تقييم سريع</h3>
+                    <p class="text-gray-600">ابدأ تقييم الصفوف الآن</p>
+                </button>
+                <button onclick="showPage('reports')" class="bg-white rounded-xl shadow-lg p-6 text-center hover:shadow-xl transition duration-300">
+                    <div class="text-4xl mb-4">📊</div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-2">عرض التقارير</h3>
+                    <p class="text-gray-600">تصفح التقارير والإحصائيات</p>
+                </button>
+                <button onclick="exportToExcel()" class="bg-white rounded-xl shadow-lg p-6 text-center hover:shadow-xl transition duration-300">
+                    <div class="text-4xl mb-4">📥</div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-2">تصدير البيانات</h3>
+                    <p class="text-gray-600">تحميل التقييمات كملف Excel</p>
+                </button>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="bg-white rounded-xl shadow-lg p-8">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-6">آخر التقييمات</h2>
+                <div id="recentActivity" class="space-y-4">
+                    <div class="text-center py-8 text-gray-500">
+                        <div class="text-4xl mb-2">📊</div>
+                        <p>لا توجد تقييمات حديثة</p>
+                        <p class="text-sm">ابدأ بتقييم الصفوف لرؤية النشاط هنا</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Evaluation Page -->
+    <div id="evaluationPage" class="page">
+        <div class="container mx-auto px-4 py-8 max-w-6xl">
+            <div class="text-center mb-8" id="evaluationTop">
+                <h1 class="text-4xl font-bold text-gray-800 mb-2">تقييم صفوف المدرسة</h1>
+                <p class="text-gray-600 mb-6">قيّم أداء الصفوف وتابع التقدم (مشترك عبر السحابة)</p>
+
+                <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div><input type="text" id="searchInput" placeholder="البحث عن صف..." class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"></div>
+                        <div>
+                            <select id="gradeFilter" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="">جميع المراحل</option>
+                                <option value="5">الخامس</option><option value="6">السادس</option><option value="7">السابع</option><option value="8">الثامن</option>
+                                <option value="9">التاسع</option><option value="10">العاشر</option><option value="11">الحادي عشر</option><option value="12">الثاني عشر</option>
+                            </select>
+                        </div>
+                        <div>
+                            <select id="sortBy" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="name">ترتيب حسب الاسم</option>
+                                <option value="stars">ترتيب حسب النجوم</option>
+                                <option value="grade">ترتيب حسب المرحلة</option>
+                                <option value="evaluations">ترتيب حسب عدد التقييمات</option>
+                            </select>
+                        </div>
+                        <div><button onclick="resetFilters()" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-200">إعادة تعيين</button></div>
+                    </div>
+                </div>
+
+                <div class="flex justify-center space-x-4 mb-4">
+                    <button onclick="saveAllEvaluations()" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200 flex items-center space-x-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+                        <span>حفظ جميع التقييمات</span>
+                    </button>
+                    <button onclick="exportToExcel()" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200 flex items-center space-x-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        <span>تصدير Excel</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8" id="classesGrid"></div>
+
+            <div id="statistics" class="mt-8 grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div class="bg-white rounded-xl shadow-lg p-6 text-center"><div class="text-3xl font-bold text-blue-600" id="totalClasses">0</div><div class="text-gray-600">إجمالي الصفوف</div></div>
+                <div class="bg-white rounded-xl shadow-lg p-6 text-center"><div class="text-3xl font-bold text-green-600" id="averageRating">0.0</div><div class="text-gray-600">متوسط التقييم</div></div>
+                <div class="bg-white rounded-xl shadow-lg p-6 text-center"><div class="text-3xl font-bold text-purple-600" id="topSubject">-</div><div class="text-gray-600">أفضل مرحلة</div></div>
+                <div class="bg-white rounded-xl shadow-lg p-6 text-center"><div class="text-3xl font-bold text-red-600" id="needsAttention">0</div><div class="text-gray-600">يحتاج متابعة</div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reports Page -->
+    <div id="reportsPage" class="page">
+        <div class="container mx-auto px-4 py-8 max-w-6xl">
+            <div class="text-center mb-8">
+                <h1 class="text-4xl font-bold text-gray-800 mb-2">التقارير والإحصائيات</h1>
+                <p class="text-gray-600 mb-6">تحليل شامل لأداء الصفوف</p>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">نوع التقرير</label>
+                        <select id="reportType" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="monthly">تقرير شهري</option>
+                            <option value="grade">تقرير حسب المرحلة</option>
+                            <option value="category">تقرير حسب المعايير</option>
+                            <option value="teacher">تقرير حسب المعلمة</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">الشهر</label>
+                        <select id="reportMonth" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="">جميع الشهور</option>
+                            <option value="10">أكتوبر</option><option value="11">نوفمبر</option><option value="12">ديسمبر</option>
+                            <option value="1">يناير</option><option value="2">فبراير</option><option value="3">مارس</option>
+                            <option value="4">أبريل</option><option value="5">مايو</option><option value="6">يونيو</option>
+                        </select>
+                    </div>
+                    <div class="flex items-end"><button onclick="generateReport()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200">إنشاء التقرير</button></div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">توزيع التقييمات حسب المرحلة</h3>
+                    <canvas id="gradeChart" width="400" height="300"></canvas>
+                </div>
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">أداء المعايير</h3>
+                    <canvas id="categoryChart" width="400" height="300"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">تقرير مفصل</h3>
+                <div id="detailedReport" class="overflow-x-auto">
+                    <p class="text-gray-500 text-center py-8">اختر نوع التقرير وانقر على "إنشاء التقرير" لعرض البيانات</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Page -->
+    <div id="settingsPage" class="page">
+        <div class="container mx-auto px-4 py-8 max-w-4xl">
+            <div class="text-center mb-8">
+                <h1 class="text-4xl font-bold text-gray-800 mb-2">الإعدادات</h1>
+                <p class="text-gray-600 mb-6">إدارة النظام والبيانات</p>
+            </div>
+
+            <div class="space-y-8">
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">إعدادات المظهر</h3>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-700">الوضع الليلي</span>
+                            <button onclick="toggleTheme()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-200">تبديل المظهر</button>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">لون المدرسة الأساسي</label>
+                            <div class="grid grid-cols-6 gap-2">
+                                <button onclick="changeSchoolColor('blue')" class="w-8 h-8 bg-blue-600 rounded-full border-2 border-gray-300 hover:border-gray-500"></button>
+                                <button onclick="changeSchoolColor('green')" class="w-8 h-8 bg-green-600 rounded-full border-2 border-gray-300 hover:border-gray-500"></button>
+                                <button onclick="changeSchoolColor('purple')" class="w-8 h-8 bg-purple-600 rounded-full border-2 border-gray-300 hover:border-gray-500"></button>
+                                <button onclick="changeSchoolColor('red')" class="w-8 h-8 bg-red-600 rounded-full border-2 border-gray-300 hover:border-gray-500"></button>
+                                <button onclick="changeSchoolColor('yellow')" class="w-8 h-8 bg-yellow-600 rounded-full border-2 border-gray-300 hover:border-gray-500"></button>
+                                <button onclick="changeSchoolColor('pink')" class="w-8 h-8 bg-pink-600 rounded-full border-2 border-gray-300 hover:border-gray-500"></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">إدارة البيانات</h3>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <span class="text-gray-700 font-medium">تصدير جميع البيانات</span>
+                                <p class="text-sm text-gray-500">تحميل جميع التقييمات كملف Excel</p>
+                            </div>
+                            <button onclick="exportToExcel()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition duration-200">تصدير</button>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <span class="text-gray-700 font-medium">نسخ احتياطي (JSON)</span>
+                                <p class="text-sm text-gray-500">حفظ نسخة احتياطية من البيانات</p>
+                            </div>
+                            <button onclick="createBackup()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-200">إنشاء نسخة</button>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <span class="text-gray-700 font-medium">استعادة النسخة الاحتياطية</span>
+                                <p class="text-sm text-gray-500">استعادة البيانات من نسخة احتياطية</p>
+                            </div>
+                            <input type="file" id="restoreFile" accept=".json" style="display: none;" onchange="restoreBackup(event)">
+                            <button onclick="document.getElementById('restoreFile').click()" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition duration-200">استعادة</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-lg p-6 border-2 border-red-200">
+                    <h3 class="text-xl font-semibold text-red-600 mb-4">⚠️ منطقة الخطر</h3>
+                    <div id="dangerZoneContent" class="space-y-4">
+                        <div class="text-center py-4">
+                            <div class="text-4xl mb-4">🔒</div>
+                            <p class="text-gray-600 mb-4">هذه المنطقة محمية - للمسؤولين فقط</p>
+                            <div class="max-w-sm mx-auto">
+                                <input type="password" id="adminPassword" placeholder="أدخل الرمز السري" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent mb-4">
+                                <button onclick="verifyAdminAccess()" class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition duration-200">دخول</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="dangerZoneActions" class="space-y-4" style="display: none;">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <span class="text-gray-700 font-medium">حذف جميع التقييمات (سحابي)</span>
+                                <p class="text-sm text-gray-500">سيتم حذف جميع البيانات نهائياً من Supabase</p>
+                            </div>
+                            <button onclick="confirmDeleteAll()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition duration-200">حذف الكل</button>
+                        </div>
+                        <div class="pt-4 border-t border-gray-200">
+                            <button onclick="lockDangerZone()" class="text-sm text-gray-600 hover:text-gray-800">🔒 إقفال منطقة الخطر</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">معلومات النظام</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div><span class="text-gray-600">إجمالي الصفوف:</span> <span class="font-semibold" id="systemTotalClasses">32</span></div>
+                        <div><span class="text-gray-600">إجمالي التقييمات:</span> <span class="font-semibold" id="systemTotalEvaluations">0</span></div>
+                        <div><span class="text-gray-600">حجم البيانات (تقريبي):</span> <span class="font-semibold" id="systemDataSize">0 KB</span></div>
+                        <div><span class="text-gray-600">آخر تحديث:</span> <span class="font-semibold" id="systemLastUpdate">-</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rating Modal -->
+    <div id="ratingModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-xl p-8 max-w-4xl w-full mx-4 max-h-screen overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-semibold text-gray-800" id="modalTitle">تقييم الصف</h3>
+                <div class="flex space-x-2">
+                    <button onclick="closeModal(); showPage('home')" class="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition duration-200 text-sm">الصفحة الرئيسية</button>
+                    <button onclick="closeModal(); showPage('evaluation')" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition duration-200 text-sm">صفحة الصفوف</button>
+                </div>
+            </div>
+
+            <div id="previousEvaluations" class="mb-6" style="display: none;">
+                <h4 class="text-lg font-semibold text-gray-800 mb-3">التقييمات السابقة</h4>
+                <div id="previousEvaluationsList" class="space-y-2 max-h-32 overflow-y-auto"></div>
+            </div>
+
+            <!-- Evaluation Criteria -->
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+                <div class="text-center">
+                    <div class="w-16 h-16 mx-auto mb-2 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center"><span class="text-white text-lg">😊</span></div>
+                    <h4 class="font-semibold text-gray-800 mb-2 text-sm">السلوكيات</h4>
+                    <div class="flex justify-center space-x-1" data-category="behavior"><span class="star text-lg" data-rating="1">⭐</span><span class="star text-lg" data-rating="2">⭐</span><span class="star text-lg" data-rating="3">⭐</span><span class="star text-lg" data-rating="4">⭐</span><span class="star text-lg" data-rating="5">⭐</span></div>
+                    <div class="text-xs text-gray-600 mt-1" id="behavior-count">0 نجوم</div>
+                </div>
+                <div class="text-center">
+                    <div class="w-16 h-16 mx-auto mb-2 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center"><span class="text-white text-lg">🚶‍♂️</span></div>
+                    <h4 class="font-semibold text-gray-800 mb-2 text-sm">الطابور الصباحي</h4>
+                    <div class="flex justify-center space-x-1" data-category="morning_line"><span class="star text-lg" data-rating="1">⭐</span><span class="star text-lg" data-rating="2">⭐</span><span class="star text-lg" data-rating="3">⭐</span><span class="star text-lg" data-rating="4">⭐</span><span class="star text-lg" data-rating="5">⭐</span></div>
+                    <div class="text-xs text-gray-600 mt-1" id="morning_line-count">0 نجوم</div>
+                </div>
+                <div class="text-center">
+                    <div class="w-16 h-16 mx-auto mb-2 bg-gradient-to-br from-purple-400 to-purple-600 rounded-full flex items-center justify-center"><span class="text-white text-lg">📚</span></div>
+                    <h4 class="font-semibold text-gray-800 mb-2 text-sm">التحصيل الدراسي</h4>
+                    <div class="flex justify-center space-x-1" data-category="academic"><span class="star text-lg" data-rating="1">⭐</span><span class="star text-lg" data-rating="2">⭐</span><span class="star text-lg" data-rating="3">⭐</span><span class="star text-lg" data-rating="4">⭐</span><span class="star text-lg" data-rating="5">⭐</span></div>
+                    <div class="text-xs text-gray-600 mt-1" id="academic-count">0 نجوم</div>
+                </div>
+                <div class="text-center">
+                    <div class="w-16 h-16 mx-auto mb-2 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center"><span class="text-white text-lg">✨</span></div>
+                    <h4 class="font-semibold text-gray-800 mb-2 text-sm">النظافة</h4>
+                    <div class="flex justify-center space-x-1" data-category="cleanliness"><span class="star text-lg" data-rating="1">⭐</span><span class="star text-lg" data-rating="2">⭐</span><span class="star text-lg" data-rating="3">⭐</span><span class="star text-lg" data-rating="4">⭐</span><span class="star text-lg" data-rating="5">⭐</span></div>
+                    <div class="text-xs text-gray-600 mt-1" id="cleanliness-count">0 نجوم</div>
+                </div>
+                <div class="text-center">
+                    <div class="w-16 h-16 mx-auto mb-2 bg-gradient-to-br from-red-400 to-red-600 rounded-full flex items-center justify-center"><span class="text-white text-lg">🏫</span></div>
+                    <h4 class="font-semibold text-gray-800 mb-2 text-sm">الممتلكات العامة</h4>
+                    <div class="flex justify-center space-x-1" data-category="property"><span class="star text-lg" data-rating="1">⭐</span><span class="star text-lg" data-rating="2">⭐</span><span class="star text-lg" data-rating="3">⭐</span><span class="star text-lg" data-rating="4">⭐</span><span class="star text-lg" data-rating="5">⭐</span></div>
+                    <div class="text-xs text-gray-600 mt-1" id="property-count">0 نجوم</div>
+                </div>
+            </div>
+
+            <div class="mt-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">اسم المعلمة المقيمة</label>
+                    <input type="text" id="teacherName" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="أدخل اسم المعلمة">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">الشهر</label>
+                        <select id="evaluationMonth" required class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="">اختر الشهر</option><option value="10">أكتوبر</option><option value="11">نوفمبر</option><option value="12">ديسمبر</option>
+                            <option value="1">يناير</option><option value="2">فبراير</option><option value="3">مارس</option>
+                            <option value="4">أبريل</option><option value="5">مايو</option><option value="6">يونيو</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">اليوم</label>
+                        <select id="evaluationDay" required class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="">اختر اليوم</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex space-x-4 mt-6">
+                <button id="saveRating" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200">حفظ التقييم</button>
+                <button id="cancelRating" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-200" onclick="closeModal()">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Rating Modal -->
+    <div id="editRatingModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-xl p-8 max-w-2xl w-full mx-4">
+            <h3 class="text-2xl font-semibold text-gray-800 mb-6">تعديل التقييم</h3>
+            <div id="editRatingContent"></div>
+            <div class="flex space-x-4 mt-6">
+                <button onclick="saveEditedRating()" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200">حفظ التعديل</button>
+                <button onclick="deleteRating()" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200">حذف التقييم</button>
+                <button onclick="closeEditModal()" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-200">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ====== Supabase Setup ======
+        const { createClient } = supabase;
+        const SUPABASE_URL = "https://yesnuxupdcozkojgztmq.supabase.co";
+        const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inllc251eHVwZGNvemtvamd6dG1xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyODA1MjMsImV4cCI6MjA3Nzg1NjUyM30.juoT4fWrB_g8YjOpaYSQSDTQcDIUR0o6OI6-aNgTjOM";
+        const db = createClient(SUPABASE_URL, SUPABASE_ANON);
+        const TABLE = "class_ratings"; // Create this table in Supabase (see notes)
+
+        // ====== App State ======
+        let classes = [];
+        let currentClassId = null;
+        let currentRatings = { behavior: 0, morning_line: 0, academic: 0, cleanliness: 0, property: 0 };
+        let currentEditingRating = null;
+        let isDarkMode = false;
+        let schoolColor = 'blue';
+        let gradeChart = null;
+        let categoryChart = null;
+
+        const gradeColors = {
+            5: { bg: 'from-blue-400 to-blue-600', border: 'border-blue-500', text: 'text-blue-800' },
+            6: { bg: 'from-green-400 to-green-600', border: 'border-green-500', text: 'text-green-800' },
+            7: { bg: 'from-purple-400 to-purple-600', border: 'border-purple-500', text: 'text-purple-800' },
+            8: { bg: 'from-yellow-400 to-yellow-600', border: 'border-yellow-500', text: 'text-yellow-800' },
+            9: { bg: 'from-red-400 to-red-600', border: 'border-red-500', text: 'text-red-800' },
+            10: { bg: 'from-indigo-400 to-indigo-600', border: 'border-indigo-500', text: 'text-indigo-800' },
+            11: { bg: 'from-pink-400 to-pink-600', border: 'border-pink-500', text: 'text-pink-800' },
+            12: { bg: 'from-teal-400 to-teal-600', border: 'border-teal-500', text: 'text-teal-800' }
+        };
+
+        // ====== Boot ======
+        document.addEventListener('DOMContentLoaded', async function() {
+            loadSettings();
+            initializeEmptyClasses();
+            renderClasses();
+            showCloudStatus(true);
+            await syncFromSupabase(); // fetch all ratings and rebuild classes
+            showCloudStatus(false);
+            updateStatistics();
+            updateHomeStats();
+            setupEventListeners();
+            updateSystemInfo();
+            subscribeRealtime(); // live updates
+        });
+
+        // ====== Settings (local only) ======
+        function loadSettings() {
+            const savedTheme = localStorage.getItem('schoolTheme');
+            const savedColor = localStorage.getItem('schoolColor');
+            if (savedTheme === 'dark') { isDarkMode = true; applyDarkMode(); }
+            if (savedColor) { schoolColor = savedColor; }
+        }
+        function toggleTheme(){ isDarkMode=!isDarkMode; localStorage.setItem('schoolTheme', isDarkMode?'dark':'light'); isDarkMode?applyDarkMode():removeDarkMode();}
+        function applyDarkMode(){ document.getElementById('mainBody').classList.add('dark-mode'); document.getElementById('navbar').classList.add('bg-gray-800'); document.getElementById('navbar').classList.remove('bg-white'); document.getElementById('themeIcon').textContent='☀️'; }
+        function removeDarkMode(){ document.getElementById('mainBody').classList.remove('dark-mode'); document.getElementById('navbar').classList.remove('bg-gray-800'); document.getElementById('navbar').classList.add('bg-white'); document.getElementById('themeIcon').textContent='🌙'; }
+        function changeSchoolColor(color){ schoolColor=color; localStorage.setItem('schoolColor', color); showNotification(`تم تغيير لون المدرسة إلى ${getColorName(color)}`, 'success'); }
+        function getColorName(c){return {blue:'الأزرق',green:'الأخضر',purple:'البنفسجي',red:'الأحمر',yellow:'الأصفر',pink:'الوردي'}[c]||c;}
+
+        // ====== Navigation ======
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+            document.querySelectorAll('nav button').forEach(btn=>{btn.classList.remove('bg-blue-600','text-white'); btn.classList.add('text-gray-600','hover:bg-gray-100');});
+            const map = {home:'homePage',evaluation:'evaluationPage',reports:'reportsPage',settings:'settingsPage'};
+            document.getElementById(map[pageId]).classList.add('active');
+            document.getElementById(pageId+'Btn').classList.add('bg-blue-600','text-white');
+            document.getElementById(pageId+'Btn').classList.remove('text-gray-600','hover:bg-gray-100');
+            if(pageId==='home'){ updateHomeStats(); updateRecentActivity(); }
+            if(pageId==='evaluation'){ renderClasses(); updateStatistics(); }
+            if(pageId==='reports'){ initializeCharts(); }
+            if(pageId==='settings'){ updateSystemInfo(); }
+        }
+
+        // ====== Classes skeleton ======
+        function initializeEmptyClasses(){
+            classes = [];
+            for (let grade = 5; grade <= 12; grade++) {
+                for (let section = 1; section <= 4; section++) {
+                    const className = `${getGradeName(grade)} ${section}`;
+                    const classId = `${grade}-${section}`;
+                    classes.push({ id: classId, name: className, grade, section, ratings: [], averageRating: 0, totalStars: 0 });
+                }
+            }
+        }
+        function getGradeName(grade){ return {5:'خامس',6:'سادس',7:'سابع',8:'ثامن',9:'تاسع',10:'عاشر',11:'حادي عشر',12:'ثاني عشر'}[grade]; }
+
+        // ====== Supabase sync ======
+        async function syncFromSupabase(){
+            // Fetch all ratings from Supabase and rebuild classes state
+            const { data, error } = await db.from(TABLE).select('*').order('timestamp', { ascending: true });
+            if (error) { console.error(error); showNotification('تعذر تحميل البيانات من السحابة. تأكد من إنشاء الجدول وسياسات RLS.', 'error'); return; }
+            // Reset all ratings
+            classes.forEach(c=>{ c.ratings=[]; c.totalStars=0; c.averageRating=0; });
+            for (const row of data){
+                const classId = `${row.grade}-${row.section}`;
+                const classItem = classes.find(c => c.id === classId);
+                if (!classItem) continue;
+                const ratingObj = {
+                    id: row.id,
+                    behavior: row.behavior,
+                    morning_line: row.morning_line,
+                    academic: row.academic,
+                    cleanliness: row.cleanliness,
+                    property: row.property,
+                    teacherName: row.teacher_name || '',
+                    date: row.date || '',
+                    month: String(row.month || ''),
+                    day: String(row.day || ''),
+                    totalStars: row.total_stars || 0,
+                    timestamp: row.timestamp || row.updated_at || new Date().toISOString(),
+                    comments: row.comments || ''
+                };
+                classItem.ratings.push(ratingObj);
+                classItem.totalStars += ratingObj.totalStars;
+            }
+            // recompute averages
+            classes.forEach(c=>{ c.averageRating = c.ratings.length>0 ? (c.totalStars / c.ratings.length / 5) : 0; });
+            renderClasses();
+            updateStatistics();
+            updateHomeStats();
+            updateRecentActivity();
+            updateSystemInfo();
+        }
+
+        async function insertRatingToCloud(classItem, rating){
+            const [grade, section] = classItem.id.split('-').map(Number);
+            const payload = {
+                grade, section,
+                class_id: classItem.id,
+                class_name: classItem.name,
+                behavior: rating.behavior,
+                morning_line: rating.morning_line,
+                academic: rating.academic,
+                cleanliness: rating.cleanliness,
+                property: rating.property,
+                teacher_name: rating.teacherName,
+                month: parseInt(rating.month||'0')||null,
+                day: parseInt(rating.day||'0')||null,
+                date: rating.date,
+                total_stars: rating.totalStars,
+                timestamp: rating.timestamp,
+                comments: rating.comments || null
+            };
+            const { data, error } = await db.from(TABLE).insert(payload).select().single();
+            if (error) throw error;
+            return data;
+        }
+
+        async function updateRatingInCloud(ratingId, updated){
+            const { error } = await db.from(TABLE).update({
+                behavior: updated.behavior,
+                morning_line: updated.morning_line,
+                academic: updated.academic,
+                cleanliness: updated.cleanliness,
+                property: updated.property,
+                teacher_name: updated.teacherName,
+                month: parseInt(updated.month||'0')||null,
+                day: parseInt(updated.day||'0')||null,
+                date: updated.date,
+                total_stars: updated.totalStars,
+                timestamp: updated.timestamp || new Date().toISOString(),
+                comments: updated.comments || null
+            }).eq('id', ratingId);
+            if (error) throw error;
+        }
+
+        async function deleteRatingInCloud(ratingId){
+            const { error } = await db.from(TABLE).delete().eq('id', ratingId);
+            if (error) throw error;
+        }
+
+        function subscribeRealtime(){
+            db.channel('public:'+TABLE)
+              .on('postgres_changes', { event:'*', schema:'public', table: TABLE }, (payload)=>{
+                // Re-sync on any change
+                syncFromSupabase();
+              }).subscribe();
+        }
+
+        // ====== UI Events ======
+        function setupEventListeners() {
+            document.addEventListener('click', function(e) {
+                if (e.target.classList.contains('star')) {
+                    const category = e.target.parentElement.dataset.category;
+                    setRating(category);
+                }
+            });
+            document.getElementById('saveRating').addEventListener('click', saveRating);
+            document.getElementById('ratingModal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
+            document.getElementById('evaluationMonth').addEventListener('change', function(){ populateDays(this.value); });
+            document.getElementById('searchInput').addEventListener('input', applyFilters);
+            document.getElementById('gradeFilter').addEventListener('change', applyFilters);
+            document.getElementById('sortBy').addEventListener('change', applyFilters);
+
+            // Enter key on admin password
+            setTimeout(()=>{
+                const passwordInput = document.getElementById('adminPassword');
+                if (passwordInput) {
+                    passwordInput.addEventListener('keypress', function(e){ if (e.key === 'Enter') verifyAdminAccess(); });
+                }
+            }, 200);
+        }
+
+        // ====== Filters & Rendering ======
+        function applyFilters() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const gradeFilter = document.getElementById('gradeFilter').value;
+            const sortBy = document.getElementById('sortBy').value;
+            let filteredClasses = [...classes];
+            if (searchTerm) filteredClasses = filteredClasses.filter(c => c.name.toLowerCase().includes(searchTerm));
+            if (gradeFilter) filteredClasses = filteredClasses.filter(c => c.grade.toString() === gradeFilter);
+            switch (sortBy) {
+                case 'name': filteredClasses.sort((a,b)=>a.name.localeCompare(b.name,'ar')); break;
+                case 'stars': filteredClasses.sort((a,b)=>b.totalStars - a.totalStars); break;
+                case 'grade': filteredClasses.sort((a,b)=>a.grade - b.grade); break;
+                case 'evaluations': filteredClasses.sort((a,b)=>b.ratings.length - a.ratings.length); break;
+            }
+            renderFilteredClasses(filteredClasses);
+        }
+        function resetFilters(){ document.getElementById('searchInput').value=''; document.getElementById('gradeFilter').value=''; document.getElementById('sortBy').value='name'; renderClasses(); }
+        function renderClasses(){ renderFilteredClasses(classes); }
+
+        function renderFilteredClasses(filtered){
+            const classesGrid = document.getElementById('classesGrid');
+            if (filtered.length===0){ classesGrid.innerHTML = `<div class="col-span-full text-center py-8 text-gray-500"><div class="text-4xl mb-2">🔍</div><p>لا توجد صفوف تطابق البحث</p></div>`; return; }
+            classesGrid.innerHTML = filtered.map(classItem => {
+                const colors = gradeColors[classItem.grade];
+                const categoryTotals = { behavior:0, morning_line:0, academic:0, cleanliness:0, property:0 };
+                classItem.ratings.forEach(r => {
+                    categoryTotals.behavior += r.behavior;
+                    categoryTotals.morning_line += r.morning_line;
+                    categoryTotals.academic += r.academic;
+                    categoryTotals.cleanliness += r.cleanliness;
+                    categoryTotals.property += r.property;
+                });
+                const needsAttention = classItem.ratings.length > 0 && (classItem.totalStars / classItem.ratings.length) < 10;
+                return `
+                <div class="bg-white rounded-xl shadow-lg border-2 ${colors.border} hover:shadow-xl transition duration-300 fade-in ${needsAttention?'ring-2 ring-red-300':''}">
+                    <div class="bg-gradient-to-r ${colors.bg} text-white p-4 rounded-t-xl">
+                        <h3 class="text-lg font-bold text-center">${classItem.name}</h3>
+                        ${needsAttention?'<div class="text-center text-xs mt-1">⚠️ يحتاج متابعة</div>':''}
+                    </div>
+                    <div class="p-4">
+                        <div class="text-center mb-4">
+                            <div class="text-3xl font-bold ${colors.text}">${classItem.totalStars}</div>
+                            <div class="text-sm text-gray-600">إجمالي النجوم</div>
+                            ${classItem.ratings.length>0 ? `
+                                <div class="text-yellow-500 text-lg mt-1">${'⭐'.repeat(Math.round(classItem.averageRating))}</div>
+                                <div class="text-xs text-gray-500">${classItem.ratings.length} تقييم</div>
+                                <div class="text-xs text-gray-600 mt-1">آخر تقييم: ${classItem.ratings[classItem.ratings.length - 1].teacherName || '-'}</div>
+                            ` : '<div class="text-xs text-gray-500 mt-2">لم يتم التقييم بعد</div>'}
+                            ${classItem.ratings.length>0 ? `
+                                <div class="mt-3 grid grid-cols-5 gap-1 text-xs">
+                                    <div class="text-center"><div class="text-blue-600 font-bold">${categoryTotals.behavior}</div><div class="text-gray-500">😊</div></div>
+                                    <div class="text-center"><div class="text-green-600 font-bold">${categoryTotals.morning_line}</div><div class="text-gray-500">🚶‍♂️</div></div>
+                                    <div class="text-center"><div class="text-purple-600 font-bold">${categoryTotals.academic}</div><div class="text-gray-500">📚</div></div>
+                                    <div class="text-center"><div class="text-yellow-600 font-bold">${categoryTotals.cleanliness}</div><div class="text-gray-500">✨</div></div>
+                                    <div class="text-center"><div class="text-red-600 font-bold">${categoryTotals.property}</div><div class="text-gray-500">🏫</div></div>
+                                </div>` : ''}
+                        </div>
+                        <button onclick="openRatingModal('${classItem.id}')" class="w-full bg-gradient-to-r ${colors.bg} hover:opacity-90 text-white font-semibold py-2 px-4 rounded-lg transition duration-200">تقييم الصف</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // ====== Home stats & activity ======
+        function updateHomeStats(){
+            const totalEvaluations = classes.reduce((s,c)=>s + c.ratings.length, 0);
+            const totalStars = classes.reduce((s,c)=>s + c.totalStars, 0);
+            const classesWithRatings = classes.filter(c=>c.ratings.length>0);
+            document.getElementById('homeStatsClasses').textContent = classes.length;
+            document.getElementById('homeStatsEvaluations').textContent = totalEvaluations;
+            document.getElementById('homeStatsStars').textContent = totalStars;
+            document.getElementById('homeStatsAverage').textContent = classesWithRatings.length>0 ? (totalStars/classesWithRatings.length).toFixed(1) : '0.0';
+        }
+
+        function updateRecentActivity(){
+            const recentActivityDiv = document.getElementById('recentActivity');
+            const allRatings = [];
+            classes.forEach(classItem => {
+                classItem.ratings.forEach((rating, index) => {
+                    allRatings.push({
+                        ...rating,
+                        className: classItem.name,
+                        classGrade: classItem.grade,
+                        classId: classItem.id,
+                        ratingIndex: index
+                    });
+                });
+            });
+            allRatings.sort((a,b)=> new Date(b.timestamp) - new Date(a.timestamp));
+            if (allRatings.length===0){
+                recentActivityDiv.innerHTML = `<div class="text-center py-8 text-gray-500"><div class="text-4xl mb-2">📊</div><p>لا توجد تقييمات حديثة</p><p class="text-sm">ابدأ بتقييم الصفوف لرؤية النشاط هنا</p></div>`;
+                return;
+            }
+            const recentRatings = allRatings.slice(0,5);
+            const colors = gradeColors;
+            recentActivityDiv.innerHTML = recentRatings.map(rating=>{
+                const gradeColor = colors[rating.classGrade];
+                return `<div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-12 h-12 bg-gradient-to-r ${gradeColor.bg} rounded-full flex items-center justify-center">
+                            <span class="text-white font-bold">${rating.classGrade}</span>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-gray-800">${rating.className}</h4>
+                            <p class="text-sm text-gray-600">بواسطة: ${rating.teacherName}</p>
+                        </div>
+                    </div>
+                    <div class="text-left">
+                        <div class="text-yellow-500 text-lg">${'⭐'.repeat(Math.min(5, Math.round(rating.totalStars / 5)))}</div>
+                        <div class="text-xs text-gray-500">${new Date(rating.timestamp).toLocaleString('ar-SA')}</div>
+                        <button onclick="editRating('${rating.classId}', ${rating.ratingIndex})" class="text-xs text-blue-600 hover:text-blue-800 mt-1">تعديل</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // ====== Modal & rating logic ======
+        function openRatingModal(classId){
+            currentClassId = classId;
+            const classItem = classes.find(c=>c.id===classId);
+            document.getElementById('modalTitle').textContent = `تقييم ${classItem.name}`;
+            document.getElementById('ratingModal').classList.remove('hidden'); document.getElementById('ratingModal').classList.add('flex');
+            if (classItem.ratings.length>0){ document.getElementById('previousEvaluations').style.display='block'; showPreviousEvaluations(classItem);} else { document.getElementById('previousEvaluations').style.display='none'; }
+            currentRatings = { behavior: 0, morning_line: 0, academic: 0, cleanliness: 0, property: 0 };
+            resetStars(); updateStarCounts();
+            document.getElementById('teacherName').value=''; document.getElementById('evaluationMonth').value=''; document.getElementById('evaluationDay').innerHTML='<option value="">اختر اليوم</option>';
+        }
+        function showPreviousEvaluations(classItem){
+            const previousList = document.getElementById('previousEvaluationsList');
+            const last3 = classItem.ratings.slice(-3);
+            previousList.innerHTML = last3.map((rating, idx)=>`
+                <div class="flex justify-between items-center p-2 bg-gray-50 rounded text-sm">
+                    <span>${new Date(rating.timestamp).toLocaleString('ar-SA')} - ${rating.teacherName} (${rating.totalStars} نجوم)</span>
+                    <button onclick="editRating('${classItem.id}', ${classItem.ratings.length - last3.length + idx})" class="text-blue-600 hover:text-blue-800">تعديل</button>
+                </div>`).join('');
+        }
+        function closeModal(){ document.getElementById('ratingModal').classList.add('hidden'); document.getElementById('ratingModal').classList.remove('flex'); currentClassId = null; }
+        function setRating(category){ currentRatings[category] = (currentRatings[category] < 5) ? currentRatings[category]+1 : 0; updateStarsDisplay(category, currentRatings[category]); updateStarCounts(); }
+        function updateStarsDisplay(category, rating){ const stars = document.querySelector(`[data-category="${category}"]`).querySelectorAll('.star'); stars.forEach((star, idx)=>{ if(idx<rating){star.classList.add('filled'); star.classList.remove('empty');} else { star.classList.add('empty'); star.classList.remove('filled'); } }); }
+        function updateStarCounts(){ Object.keys(currentRatings).forEach(cat=>{ const el = document.getElementById(`${cat}-count`); if(el){ const cnt = currentRatings[cat]; el.textContent = `${cnt} ${cnt===1?'نجمة':'نجوم'}`; } }); }
+        function resetStars(){ document.querySelectorAll('.star').forEach(s=>{ s.classList.add('empty'); s.classList.remove('filled'); }); }
+
+        async function saveRating(){
+            const totalRating = Object.values(currentRatings).reduce((s,v)=>s+v,0);
+            const teacherName = document.getElementById('teacherName').value.trim();
+            const selectedMonth = document.getElementById('evaluationMonth').value;
+            const selectedDay = document.getElementById('evaluationDay').value;
+            if (totalRating===0){ showNotification('يرجى تقييم معيار واحد على الأقل','error'); return; }
+            if (!teacherName){ showNotification('يرجى إدخال اسم المعلمة المقيمة','error'); return; }
+            if (!selectedMonth || !selectedDay){ showNotification('يرجى اختيار الشهر واليوم','error'); return; }
+
+            const classItem = classes.find(c=>c.id===currentClassId);
+            const monthNames = {'10':'أكتوبر','11':'نوفمبر','12':'ديسمبر','1':'يناير','2':'فبراير','3':'مارس','4':'أبريل','5':'مايو','6':'يونيو'};
+            const formattedDate = `${selectedDay} ${monthNames[selectedMonth]}`;
+            const newRating = {
+                behavior: currentRatings.behavior, morning_line: currentRatings.morning_line, academic: currentRatings.academic, cleanliness: currentRatings.cleanliness, property: currentRatings.property,
+                teacherName, date: formattedDate, month: selectedMonth, day: selectedDay, totalStars: totalRating, timestamp: new Date().toISOString()
+            };
+
+            try{
+                showCloudStatus(true);
+                const inserted = await insertRatingToCloud(classItem, newRating);
+                // Update local state
+                newRating.id = inserted.id;
+                classItem.ratings.push(newRating);
+                classItem.totalStars += newRating.totalStars;
+                classItem.averageRating = classItem.totalStars / classItem.ratings.length / 5;
+                updateAfterChange();
+                closeModal();
+                showNotification('تم حفظ التقييم بنجاح (سحابي)!', 'success');
+            }catch(err){
+                console.error(err);
+                showNotification('تعذر حفظ التقييم. تحقق من إعدادات Supabase.', 'error');
+            } finally {
+                showCloudStatus(false);
+            }
+        }
+
+        function updateAfterChange(){
+            renderClasses(); updateStatistics(); updateHomeStats(); updateRecentActivity(); updateSystemInfo();
+        }
+
+        function editRating(classId, ratingIndex){
+            const classItem = classes.find(c=>c.id===classId);
+            const rating = classItem.ratings[ratingIndex];
+            currentEditingRating = { classId, ratingIndex, ratingId: rating.id };
+            document.getElementById('editRatingContent').innerHTML = `
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">اسم المعلمة المقيمة</label>
+                        <input type="text" id="editTeacherName" value="${rating.teacherName||''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">الشهر</label>
+                            <select id="editMonth" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="10" ${rating.month==='10'?'selected':''}>أكتوبر</option>
+                                <option value="11" ${rating.month==='11'?'selected':''}>نوفمبر</option>
+                                <option value="12" ${rating.month==='12'?'selected':''}>ديسمبر</option>
+                                <option value="1" ${rating.month==='1'?'selected':''}>يناير</option>
+                                <option value="2" ${rating.month==='2'?'selected':''}>فبراير</option>
+                                <option value="3" ${rating.month==='3'?'selected':''}>مارس</option>
+                                <option value="4" ${rating.month==='4'?'selected':''}>أبريل</option>
+                                <option value="5" ${rating.month==='5'?'selected':''}>مايو</option>
+                                <option value="6" ${rating.month==='6'?'selected':''}>يونيو</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">اليوم</label>
+                            <input type="number" id="editDay" value="${rating.day||''}" min="1" max="31" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">التعليقات</label>
+                        <textarea id="editComments" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows="3">${rating.comments || ''}</textarea>
+                    </div>
+                    <div class="grid grid-cols-5 gap-4 text-center">
+                        <div><label class="block text-sm font-medium text-gray-700 mb-2">السلوكيات</label><input type="number" id="editBehavior" value="${rating.behavior}" min="0" max="5" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"></div>
+                        <div><label class="block text-sm font-medium text-gray-700 mb-2">الطابور الصباحي</label><input type="number" id="editMorningLine" value="${rating.morning_line}" min="0" max="5" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"></div>
+                        <div><label class="block text-sm font-medium text-gray-700 mb-2">التحصيل الدراسي</label><input type="number" id="editAcademic" value="${rating.academic}" min="0" max="5" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"></div>
+                        <div><label class="block text-sm font-medium text-gray-700 mb-2">النظافة</label><input type="number" id="editCleanliness" value="${rating.cleanliness}" min="0" max="5" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"></div>
+                        <div><label class="block text-sm font-medium text-gray-700 mb-2">الممتلكات العامة</label><input type="number" id="editProperty" value="${rating.property}" min="0" max="5" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"></div>
+                    </div>
+                </div>`;
+            document.getElementById('editRatingModal').classList.remove('hidden'); document.getElementById('editRatingModal').classList.add('flex');
+        }
+
+        async function saveEditedRating(){
+            const { classId, ratingIndex, ratingId } = currentEditingRating;
+            const classItem = classes.find(c=>c.id===classId);
+            const rating = classItem.ratings[ratingIndex];
+            const monthNames = {'10':'أكتوبر','11':'نوفمبر','12':'ديسمبر','1':'يناير','2':'فبراير','3':'مارس','4':'أبريل','5':'مايو','6':'يونيو'};
+            const month = document.getElementById('editMonth').value;
+            const day = document.getElementById('editDay').value;
+            const updated = {
+                ...rating,
+                teacherName: document.getElementById('editTeacherName').value,
+                month, day, date: `${day} ${monthNames[month]}`,
+                comments: document.getElementById('editComments').value,
+                behavior: parseInt(document.getElementById('editBehavior').value)||0,
+                morning_line: parseInt(document.getElementById('editMorningLine').value)||0,
+                academic: parseInt(document.getElementById('editAcademic').value)||0,
+                cleanliness: parseInt(document.getElementById('editCleanliness').value)||0,
+                property: parseInt(document.getElementById('editProperty').value)||0
+            };
+            updated.totalStars = updated.behavior + updated.morning_line + updated.academic + updated.cleanliness + updated.property;
+            try{
+                showCloudStatus(true);
+                await updateRatingInCloud(ratingId, updated);
+                classItem.ratings[ratingIndex] = { ...updated, id: ratingId };
+                classItem.totalStars = classItem.ratings.reduce((s,r)=>s+r.totalStars,0);
+                classItem.averageRating = classItem.ratings.length>0 ? classItem.totalStars / classItem.ratings.length / 5 : 0;
+                closeEditModal(); updateAfterChange();
+                showNotification('تم تحديث التقييم سحابيًا!', 'success');
+            }catch(err){
+                console.error(err);
+                showNotification('تعذر تحديث التقييم.', 'error');
+            } finally { showCloudStatus(false); }
+        }
+
+        async function deleteRating(){
+            if (!confirm('هل أنت متأكد من حذف هذا التقييم؟')) return;
+            const { classId, ratingIndex, ratingId } = currentEditingRating;
+            const classItem = classes.find(c=>c.id===classId);
+            try{
+                showCloudStatus(true);
+                await deleteRatingInCloud(ratingId);
+                classItem.ratings.splice(ratingIndex,1);
+                classItem.totalStars = classItem.ratings.reduce((s,r)=>s+r.totalStars,0);
+                classItem.averageRating = classItem.ratings.length>0 ? classItem.totalStars / classItem.ratings.length / 5 : 0;
+                closeEditModal(); updateAfterChange();
+                showNotification('تم حذف التقييم.', 'success');
+            }catch(err){
+                console.error(err);
+                showNotification('تعذر حذف التقييم.', 'error');
+            } finally { showCloudStatus(false); }
+        }
+        function closeEditModal(){ document.getElementById('editRatingModal').classList.add('hidden'); document.getElementById('editRatingModal').classList.remove('flex'); currentEditingRating=null; }
+
+        // ====== Stats & Reports ======
+        function updateStatistics(){
+            document.getElementById('totalClasses').textContent = classes.length;
+            const classesWithRatings = classes.filter(c=>c.ratings.length>0);
+            const totalStars = classesWithRatings.reduce((s,c)=>s+c.totalStars,0);
+            document.getElementById('averageRating').textContent = classesWithRatings.length>0 ? (totalStars/classesWithRatings.length).toFixed(1) : '0.0';
+            const gradeStars = {};
+            classes.forEach(c=>{ if(c.ratings.length>0){ if(!gradeStars[c.grade]) gradeStars[c.grade]={total:0,count:0}; gradeStars[c.grade].total+=c.totalStars; gradeStars[c.grade].count+=1; }});
+            let topGrade='-', highest=0; Object.keys(gradeStars).forEach(g=>{ const avg = gradeStars[g].total/gradeStars[g].count; if (avg>highest){ highest=avg; topGrade=getGradeName(parseInt(g)); } });
+            document.getElementById('topSubject').textContent = topGrade;
+            const needsAttentionCount = classes.filter(c=> c.ratings.length>0 && (c.totalStars / c.ratings.length) < 10 ).length;
+            document.getElementById('needsAttention').textContent = needsAttentionCount;
+        }
+
+        function initializeCharts(){
+            const gradeCtx = document.getElementById('gradeChart').getContext('2d');
+            if (gradeChart) gradeChart.destroy();
+            const gradeData = {}; classes.forEach(c=>{ const name=getGradeName(c.grade); if(!gradeData[name]) gradeData[name]=0; gradeData[name]+=c.totalStars; });
+            gradeChart = new Chart(gradeCtx, { type:'bar', data:{ labels:Object.keys(gradeData), datasets:[{ label:'إجمالي النجوم', data:Object.values(gradeData), backgroundColor:['#3B82F6','#10B981','#8B5CF6','#F59E0B','#EF4444','#6366F1','#EC4899','#14B8A6'] }] }, options:{ responsive:true, plugins:{ legend:{ display:false } }, scales:{ y:{ beginAtZero:true }}} });
+
+            const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+            if (categoryChart) categoryChart.destroy();
+            const categoryTotals = {'السلوكيات':0,'الطابور الصباحي':0,'التحصيل الدراسي':0,'النظافة':0,'الممتلكات العامة':0};
+            classes.forEach(c=>{ c.ratings.forEach(r=>{ categoryTotals['السلوكيات']+=r.behavior; categoryTotals['الطابور الصباحي']+=r.morning_line; categoryTotals['التحصيل الدراسي']+=r.academic; categoryTotals['النظافة']+=r.cleanliness; categoryTotals['الممتلكات العامة']+=r.property; }); });
+            categoryChart = new Chart(categoryCtx, { type:'doughnut', data:{ labels:Object.keys(categoryTotals), datasets:[{ data:Object.values(categoryTotals), backgroundColor:['#3B82F6','#10B981','#8B5CF6','#F59E0B','#EF4444'] }] }, options:{ responsive:true, plugins:{ legend:{ position:'bottom' } } } });
+        }
+
+        // ====== Reports ======
+        function generateReport(){
+            const reportType = document.getElementById('reportType').value;
+            const reportMonth = document.getElementById('reportMonth').value;
+            let reportData = [];
+            switch (reportType){
+                case 'monthly': reportData = generateMonthlyReport(reportMonth); break;
+                case 'grade': reportData = generateGradeReport(); break;
+                case 'category': reportData = generateCategoryReport(); break;
+                case 'teacher': reportData = generateTeacherReport(); break;
+            }
+            displayReport(reportData, reportType);
+        }
+        function generateMonthlyReport(month){
+            const report = [];
+            classes.forEach(c=>{
+                const list = month? c.ratings.filter(r=>r.month===month): c.ratings;
+                if (list.length>0){
+                    const totalStars = list.reduce((s,r)=>s+r.totalStars,0);
+                    const avgStars = totalStars / list.length;
+                    report.push({ class: c.name, evaluations: list.length, totalStars, averageStars: avgStars.toFixed(1) });
+                }
+            });
+            return report.sort((a,b)=>b.averageStars - a.averageStars);
+        }
+        function generateGradeReport(){
+            const gradeData = {};
+            classes.forEach(c=>{
+                const gradeName = getGradeName(c.grade);
+                if (!gradeData[gradeName]) gradeData[gradeName] = { totalStars:0, totalEvaluations:0, classes:0 };
+                gradeData[gradeName].totalStars += c.totalStars;
+                gradeData[gradeName].totalEvaluations += c.ratings.length;
+                gradeData[gradeName].classes += 1;
+            });
+            return Object.entries(gradeData).map(([grade,data])=>({ grade, classes:data.classes, evaluations:data.totalEvaluations, totalStars:data.totalStars, averageStars: data.totalEvaluations>0 ? (data.totalStars/data.totalEvaluations).toFixed(1) : '0.0' })).sort((a,b)=>b.averageStars - a.averageStars);
+        }
+        function generateCategoryReport(){
+            const cat = {'السلوكيات':{total:0,count:0},'الطابور الصباحي':{total:0,count:0},'التحصيل الدراسي':{total:0,count:0},'النظافة':{total:0,count:0},'الممتلكات العامة':{total:0,count:0}};
+            classes.forEach(c=>{ c.ratings.forEach(r=>{ cat['السلوكيات'].total+=r.behavior; cat['السلوكيات'].count++; cat['الطابور الصباحي'].total+=r.morning_line; cat['الطابور الصباحي'].count++; cat['التحصيل الدراسي'].total+=r.academic; cat['التحصيل الدراسي'].count++; cat['النظافة'].total+=r.cleanliness; cat['النظافة'].count++; cat['الممتلكات العامة'].total+=r.property; cat['الممتلكات العامة'].count++; }); });
+            return Object.entries(cat).map(([category,data])=>({ category, totalStars:data.total, evaluations:data.count, averageStars: data.count>0 ? (data.total/data.count).toFixed(1) : '0.0' })).sort((a,b)=>b.averageStars - a.averageStars);
+        }
+        function generateTeacherReport(){
+            const teacher = {};
+            classes.forEach(c=>{ c.ratings.forEach(r=>{ if(!teacher[r.teacherName]) teacher[r.teacherName] = { totalStars:0, evaluations:0 }; teacher[r.teacherName].totalStars += r.totalStars; teacher[r.teacherName].evaluations += 1; }); });
+            return Object.entries(teacher).map(([t,data])=>({ teacher:t, evaluations:data.evaluations, totalStars:data.totalStars, averageStars: (data.totalStars/data.evaluations).toFixed(1) })).sort((a,b)=>b.evaluations - a.evaluations);
+        }
+        function displayReport(reportData, type){
+            const reportDiv = document.getElementById('detailedReport');
+            if (reportData.length===0){ reportDiv.innerHTML = '<p class="text-gray-500 text-center py-8">لا توجد بيانات للعرض</p>'; return; }
+            let head='';
+            switch (type){
+                case 'monthly': head = '<th class="px-6 py-3">الصف</th><th class="px-6 py-3">عدد التقييمات</th><th class="px-6 py-3">إجمالي النجوم</th><th class="px-6 py-3">متوسط النجوم</th>'; break;
+                case 'grade': head = '<th class="px-6 py-3">المرحلة</th><th class="px-6 py-3">عدد الصفوف</th><th class="px-6 py-3">عدد التقييمات</th><th class="px-6 py-3">إجمالي النجوم</th><th class="px-6 py-3">متوسط النجوم</th>'; break;
+                case 'category': head = '<th class="px-6 py-3">المعيار</th><th class="px-6 py-3">إجمالي النجوم</th><th class="px-6 py-3">عدد التقييمات</th><th class="px-6 py-3">متوسط النجوم</th>'; break;
+                case 'teacher': head = '<th class="px-6 py-3">اسم المعلمة</th><th class="px-6 py-3">عدد التقييمات</th><th class="px-6 py-3">إجمالي النجوم</th><th class="px-6 py-3">متوسط النجوم</th>'; break;
+            }
+            let rows='';
+            reportData.forEach((row, idx)=>{
+                switch (type){
+                    case 'monthly': rows += `<tr class="${idx%2===0?'bg-white':'bg-gray-50'}"><td class="px-6 py-4">${row.class}</td><td class="px-6 py-4">${row.evaluations}</td><td class="px-6 py-4">${row.totalStars}</td><td class="px-6 py-4">${row.averageStars}</td></tr>`; break;
+                    case 'grade': rows += `<tr class="${idx%2===0?'bg-white':'bg-gray-50'}"><td class="px-6 py-4">${row.grade}</td><td class="px-6 py-4">${row.classes}</td><td class="px-6 py-4">${row.evaluations}</td><td class="px-6 py-4">${row.totalStars}</td><td class="px-6 py-4">${row.averageStars}</td></tr>`; break;
+                    case 'category': rows += `<tr class="${idx%2===0?'bg-white':'bg-gray-50'}"><td class="px-6 py-4">${row.category}</td><td class="px-6 py-4">${row.totalStars}</td><td class="px-6 py-4">${row.evaluations}</td><td class="px-6 py-4">${row.averageStars}</td></tr>`; break;
+                    case 'teacher': rows += `<tr class="${idx%2===0?'bg-white':'bg-gray-50'}"><td class="px-6 py-4">${row.teacher}</td><td class="px-6 py-4">${row.evaluations}</td><td class="px-6 py-4">${row.totalStars}</td><td class="px-6 py-4">${row.averageStars}</td></tr>`; break;
+                }
+            });
+            reportDiv.innerHTML = `<table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr>${head}</tr></thead><tbody class="bg-white divide-y divide-gray-200">${rows}</tbody></table>`;
+        }
+
+        // ====== Export / Backup / System ======
+        function exportToExcel(){
+            const allRatings = [];
+            classes.forEach(c=>{ c.ratings.forEach(r=>{
+                allRatings.push({'الصف': c.name,'المرحلة': getGradeName(c.grade),'المعلمة المقيمة': r.teacherName,'التاريخ': r.date,'السلوكيات': r.behavior,'الطابور الصباحي': r.morning_line,'التحصيل الدراسي': r.academic,'النظافة': r.cleanliness,'الممتلكات العامة': r.property,'إجمالي النجوم': r.totalStars});
+            })});
+            if (allRatings.length===0){ showNotification('لا توجد بيانات للتصدير','error'); return; }
+            const headers = Object.keys(allRatings[0]);
+            const csvContent = [ headers.join(','), ...allRatings.map(row => headers.map(h=>`"${row[h]}"`).join(',')) ].join('\\n');
+            const blob = new Blob(['\\ufeff'+csvContent], { type:'text/csv;charset=utf-8;' });
+            const link = document.createElement('a'); const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url); link.setAttribute('download', `تقييمات_المدرسة_${new Date().toLocaleDateString('ar-SA')}.csv`);
+            link.style.visibility='hidden'; document.body.appendChild(link); link.click(); document.body.removeChild(link);
+            showNotification('تم تصدير البيانات بنجاح!','success');
+        }
+
+        function createBackup(){
+            const backup = { classes, timestamp: new Date().toISOString() };
+            const blob = new Blob([JSON.stringify(backup, null, 2)], { type:'application/json' });
+            const link = document.createElement('a'); const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url); link.setAttribute('download', `نسخة_احتياطية_${new Date().toLocaleDateString('ar-SA')}.json`);
+            link.style.visibility='hidden'; document.body.appendChild(link); link.click(); document.body.removeChild(link);
+            showNotification('تم إنشاء النسخة الاحتياطية بنجاح!','success');
+        }
+
+        async function restoreBackup(event){
+            const file = event.target.files[0]; if(!file) return;
+            const reader = new FileReader();
+            reader.onload = async function(e){
+                try{
+                    const backup = JSON.parse(e.target.result);
+                    if (!backup.classes || !Array.isArray(backup.classes)){ showNotification('ملف النسخة الاحتياطية غير صالح','error'); return; }
+                    // Insert all ratings into Supabase
+                    showCloudStatus(true);
+                    for (const c of backup.classes){
+                        const [grade, section] = c.id.split('-').map(Number);
+                        for (const r of c.ratings){
+                            const payload = { grade, section, class_id:c.id, class_name:c.name, behavior:r.behavior, morning_line:r.morning_line, academic:r.academic, cleanliness:r.cleanliness, property:r.property, teacher_name:r.teacherName, month:parseInt(r.month||'0')||null, day:parseInt(r.day||'0')||null, date:r.date, total_stars:r.totalStars, timestamp:r.timestamp || new Date().toISOString(), comments:r.comments||null };
+                            await db.from(TABLE).insert(payload);
+                        }
+                    }
+                    await syncFromSupabase();
+                    showNotification('تمت الاستعادة بنجاح!','success');
+                }catch(err){ console.error(err); showNotification('خطأ في قراءة/استعادة النسخة','error'); }
+                finally{ showCloudStatus(false); }
+            };
+            reader.readAsText(file);
+        }
+
+        function updateSystemInfo(){
+            const totalEvaluations = classes.reduce((s,c)=>s+c.ratings.length,0);
+            const estSize = new Blob([JSON.stringify(classes)]).size;
+            const last = getLatestTimestamp();
+            document.getElementById('systemTotalClasses').textContent = classes.length;
+            document.getElementById('systemTotalEvaluations').textContent = totalEvaluations;
+            document.getElementById('systemDataSize').textContent = `${(estSize/1024).toFixed(1)} KB`;
+            document.getElementById('systemLastUpdate').textContent = last ? new Date(last).toLocaleString('ar-SA') : '-';
+        }
+        function getLatestTimestamp(){
+            let latest = null;
+            classes.forEach(c=> c.ratings.forEach(r=>{ if(!latest || new Date(r.timestamp)>new Date(latest)) latest = r.timestamp; }));
+            return latest;
+        }
+
+        // ====== Danger Zone ======
+        function verifyAdminAccess(){
+            const pw = document.getElementById('adminPassword').value;
+            const correct = 'أم الفضل';
+            if (pw===correct){ document.getElementById('dangerZoneContent').style.display='none'; document.getElementById('dangerZoneActions').style.display='block'; showNotification('تم الدخول بنجاح إلى منطقة الخطر','success'); }
+            else { showNotification('الرمز السري غير صحيح','error'); document.getElementById('adminPassword').value=''; document.getElementById('adminPassword').focus(); }
+        }
+        function lockDangerZone(){ document.getElementById('dangerZoneContent').style.display='block'; document.getElementById('dangerZoneActions').style.display='none'; document.getElementById('adminPassword').value=''; showNotification('تم إقفال منطقة الخطر','success'); }
+
+        async function confirmDeleteAll(){
+            if (!confirm('هل أنت متأكد من حذف جميع التقييمات؟ هذا الإجراء لا يمكن التراجع عنه!')) return;
+            if (!confirm('تأكيد نهائي: سيتم حذف جميع البيانات نهائياً من السحابة!')) return;
+            try {
+                showCloudStatus(true);
+                // Delete all rows
+                const { error } = await db.from(TABLE).delete().neq('id', ''); // delete all
+                if (error) throw error;
+                // Reset local
+                classes.forEach(c=>{ c.ratings=[]; c.totalStars=0; c.averageRating=0; });
+                updateAfterChange();
+                showNotification('تم حذف جميع التقييمات!', 'success');
+            } catch(err){
+                console.error(err);
+                showNotification('تعذر حذف البيانات من السحابة','error');
+            } finally { showCloudStatus(false); }
+        }
+
+        // ====== Helpers ======
+        function populateDays(month){
+            const daySelect = document.getElementById('evaluationDay');
+            daySelect.innerHTML = '<option value="">اختر اليوم</option>';
+            if (!month) return;
+            const currentYear = new Date().getFullYear();
+            const days = new Date(currentYear, parseInt(month), 0).getDate();
+            for (let d=1; d<=days; d++){ const opt=document.createElement('option'); opt.value=d; opt.textContent=d; daySelect.appendChild(opt); }
+        }
+        function showNotification(message, type){
+            const n = document.createElement('div');
+            n.className = `notification fixed top-4 right-4 px-6 py-3 rounded-lg text-white z-50 ${type==='success'?'bg-green-600':'bg-red-600'}`;
+            n.textContent = message; document.body.appendChild(n); setTimeout(()=>n.remove(), 3000);
+        }
+        function showCloudStatus(show){
+            const bar = document.getElementById('cloudStatus');
+            if (show){ bar.classList.remove('hidden'); } else { bar.classList.add('hidden'); }
+        }
+    </script>
+</body>
+</html>
